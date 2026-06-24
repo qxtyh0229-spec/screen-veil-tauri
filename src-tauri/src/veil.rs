@@ -167,77 +167,112 @@ mod platform {
 }
 
 // macOS implementation
+// 纯 objc 0.2 msg_send, 不依赖 cocoa crate
 #[cfg(target_os = "macos")]
 mod platform {
     use super::*;
-    use cocoa::appkit::{
-        NSApp, NSBackingStoreBuffered, NSWindow, NSWindowStyleMask,
-    };
-    use cocoa::base::{id, nil, YES, NO};
-    use cocoa::foundation::{NSPoint, NSRect, NSString};
     use objc::msg_send;
+    use objc::runtime::Object;
+    use std::ffi::CString;
     use std::sync::Mutex;
 
-    static WINDOW_REF: Mutex<Option<id>> = Mutex::new(None);
+    type Id = *mut Object;
+
+    static WINDOW_REF: Mutex<Option<Id>> = Mutex::new(None);
+
+    fn nil_id() -> Id { std::ptr::null_mut() }
+
+    // [[NSString alloc] initWithUTF8String:cstr]
+    unsafe fn nsstring(s: &str) -> Id {
+        let cstr = CString::new(s).unwrap();
+        let cls = objc::class!(NSString);
+        let obj: Id = msg_send![cls, alloc];
+        msg_send![obj, initWithUTF8String: cstr.as_ptr()]
+    }
+
+    // CGRect / CGPoint / CGSize — 与 NSRect 等价的 C struct (64-bit Apple)
+    #[repr(C)]
+    #[derive(Copy, Clone)]
+    struct CGPoint { x: f64, y: f64 }
+    #[repr(C)]
+    #[derive(Copy, Clone)]
+    struct CGSize { width: f64, height: f64 }
+    #[repr(C)]
+    #[derive(Copy, Clone)]
+    struct CGRect { origin: CGPoint, size: CGSize }
 
     pub fn show() {
         if is_visible() { return; }
 
         unsafe {
-            let app = NSApp();
-            app.setActivationPolicy_(
-                cocoa::appkit::NSApplicationActivationPolicy::NSApplicationActivationPolicyAccessory,
-            );
+            // [NSApplication sharedApplication]
+            let app: Id = msg_send![objc::class!(NSApplication), sharedApplication];
 
-            let screen: id = msg_send!(cocoa::base::class!(NSScreen), mainScreen);
-            let frame: NSRect = msg_send!(screen, frame);
+            // setActivationPolicy: NSApplicationActivationPolicyAccessory = 1
+            let _: () = msg_send![app, setActivationPolicy: 1i64];
 
-            let style = NSWindowStyleMask::NSBorderlessWindowMask
-                | NSWindowStyleMask::NSFullSizeContentViewWindowMask;
+            // [NSScreen mainScreen]
+            let screen: Id = msg_send![objc::class!(NSScreen), mainScreen];
+            // -frame returns CGRect (value type)
+            let frame: CGRect = msg_send![screen, frame];
 
-            let window: id = NSWindow::alloc(nil).initWithContentRect_styleMask_backing_defer_(
-                frame,
-                style,
-                NSBackingStoreBuffered,
-                NO,
-            );
-
-            let _: () = msg_send![window, setBackgroundColor: cocoa::appkit::NSColor::blackColor(nil)];
-            let _: () = msg_send![window, setLevel: cocoa::base::NSIntegerMax];
-            let _: () = msg_send![window, setOpaque: YES];
-            let _: () = msg_send![window, setHidesOnDeactivate: NO];
-            let _: () = msg_send![window, setCollectionBehavior:
-                cocoa::appkit::NSWindowCollectionBehavior::NSWindowCollectionBehaviorCanJoinAllSpaces
-                | cocoa::appkit::NSWindowCollectionBehavior::NSWindowCollectionBehaviorFullScreenAuxiliary
+            // [[NSWindow alloc] initWithContentRect:styleMask:backing:defer:]
+            // styleMask: NSBorderlessWindowMask = 0
+            // backing:  NSBackingStoreBuffered  = 2
+            let window: Id = msg_send![objc::class!(NSWindow), alloc];
+            let window: Id = msg_send![window,
+                initWithContentRect: frame
+                styleMask: 0u64
+                backing: 2u64
+                defer: false
             ];
-            window.makeKeyAndOrderFront_(nil);
+
+            // [NSColor blackColor]
+            let black: Id = msg_send![objc::class!(NSColor), blackColor];
+            let _: () = msg_send![window, setBackgroundColor: black];
+
+            // setLevel: NSIntegerMax
+            let _: () = msg_send![window, setLevel: i64::MAX];
+            // setOpaque: YES
+            let _: () = msg_send![window, setOpaque: true];
+            // setHidesOnDeactivate: NO
+            let _: () = msg_send![window, setHidesOnDeactivate: false];
+            // setCollectionBehavior: CanJoinAllSpaces(1) | FullScreenAuxiliary(256)
+            let _: () = msg_send![window, setCollectionBehavior: 1i64 | 256i64];
+            // makeKeyAndOrderFront:nil
+            let _: () = msg_send![window, makeKeyAndOrderFront: nil_id()];
+            // orderFrontRegardless
             let _: () = msg_send![window, orderFrontRegardless];
 
-            let text = NSString::alloc(nil).init_str(&crate::get_text());
-            let font_size: f64 = frame.size.height / 15.0;
-            let font: id = msg_send![
-                cocoa::appkit::NSFont::class(),
-                boldSystemFontOfSize: font_size
-            ];
+            // Label text
+            let text = nsstring(&crate::get_text());
+            let font_size = frame.size.height / 15.0;
+            // [NSFont boldSystemFontOfSize:fontSize]
+            let font: Id = msg_send![objc::class!(NSFont), boldSystemFontOfSize: font_size];
 
-            let label: id = msg_send![cocoa::appkit::NSTextField::class(), alloc];
-            let label: id = msg_send![label,
-                initWithFrame: NSRect::new(NSPoint::new(0.0, 0.0), frame.size)
-            ];
+            // [[NSTextField alloc] initWithFrame:zero_rect]
+            let label: Id = msg_send![objc::class!(NSTextField), alloc];
+            let label_rect = CGRect { origin: CGPoint { x: 0.0, y: 0.0 }, size: frame.size };
+            let label: Id = msg_send![label, initWithFrame: label_rect];
+
             let _: () = msg_send![label, setStringValue: text];
             let _: () = msg_send![label, setFont: font];
-            let _: () = msg_send![label, setTextColor: cocoa::appkit::NSColor::whiteColor(nil)];
-            let _: () = msg_send![label, setBezeled: NO];
-            let _: () = msg_send![label, setDrawsBackground: NO];
-            let _: () = msg_send![label, setEditable: NO];
-            let _: () = msg_send![label, setSelectable: NO];
-            let _: () = msg_send![label, setAlignment: 2];
-            let _: () = msg_send![label, setAutoresizingMask: 18];
+            let white: Id = msg_send![objc::class!(NSColor), whiteColor];
+            let _: () = msg_send![label, setTextColor: white];
+            let _: () = msg_send![label, setBezeled: false];
+            let _: () = msg_send![label, setDrawsBackground: false];
+            let _: () = msg_send![label, setEditable: false];
+            let _: () = msg_send![label, setSelectable: false];
+            // NSTextAlignmentCenter = 2
+            let _: () = msg_send![label, setAlignment: 2i64];
+            // NSViewWidthSizable(2) | NSViewHeightSizable(16) = 18
+            let _: () = msg_send![label, setAutoresizingMask: 18i64];
 
-            let content: id = msg_send![window, contentView];
+            let content: Id = msg_send![window, contentView];
             let _: () = msg_send![content, addSubview: label];
 
-            let _ = app.activateIgnoringOtherApps_(YES);
+            // [NSApp activateIgnoringOtherApps:YES]
+            let _: () = msg_send![app, activateIgnoringOtherApps: true];
 
             *WINDOW_REF.lock().unwrap() = Some(window);
             set_visible_state(true);
