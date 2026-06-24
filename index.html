@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Screen Veil</title>
+    <style>
+      :root { color-scheme: dark; }
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei UI", sans-serif;
+        margin: 0; padding: 24px; background: #1e1e1e; color: #e0e0e0;
+        height: 100vh; box-sizing: border-box;
+      }
+      h1 { margin-top: 0; font-size: 22px; color: #fff; }
+      .card {
+        background: #2a2a2a; border-radius: 8px; padding: 16px 20px;
+        margin-bottom: 16px; border: 1px solid #333;
+      }
+      .status { display: flex; align-items: center; gap: 10px; }
+      .dot { width: 12px; height: 12px; border-radius: 50%; background: #666; }
+      .dot.on { background: #4ade80; box-shadow: 0 0 8px #4ade80; }
+      .info { color: #999; font-size: 13px; margin-top: 6px; }
+      kbd {
+        background: #1a1a1a; border: 1px solid #444; border-radius: 4px;
+        padding: 2px 8px; font-family: monospace; font-size: 12px;
+        color: #4ade80; box-shadow: 0 1px 0 #444;
+      }
+      button {
+        background: #3b82f6; color: white; border: none; border-radius: 6px;
+        padding: 8px 16px; font-size: 14px; cursor: pointer; margin-right: 8px;
+      }
+      button:hover { background: #2563eb; }
+      button:active { transform: translateY(1px); }
+      input[type="text"] {
+        background: #1a1a1a; color: #e0e0e0; border: 1px solid #444;
+        border-radius: 4px; padding: 6px 10px; font-size: 13px; width: 100%;
+        box-sizing: border-box; margin-top: 6px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>🛡️ Screen Veil 控制面板</h1>
+
+    <div class="card">
+      <div class="status">
+        <div class="dot" id="status-dot"></div>
+        <div>
+          <div>遮罩状态: <strong id="status-text">隐藏</strong></div>
+          <div class="info">按 <kbd>Ctrl+Alt+P</kbd> (Win) / <kbd>Cmd+Option+P</kbd> (Mac) 切换</div>
+        </div>
+      </div>
+      <div style="margin-top: 12px">
+        <button id="toggle-btn">手动切换</button>
+        <button id="quit-btn" style="background: #ef4444">退出</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div>显示文字</div>
+      <input type="text" id="text-input" value="警告 警告 有人在看你的屏幕" />
+      <div class="info">修改后自动保存到配置文件</div>
+    </div>
+
+    <div class="card">
+      <div>背景色</div>
+      <input type="text" id="bg-input" value="#000000" />
+      <div class="info">支持任何 CSS 颜色值（如 #000000, black, rgba(0,0,0,0.95)）</div>
+    </div>
+
+    <div class="card">
+      <div>文字颜色</div>
+      <input type="text" id="fg-input" value="#FFFFFF" />
+    </div>
+
+    <div class="card">
+      <div>关于</div>
+      <div class="info">
+        Screen Veil v1.0 — Tauri 2 + Rust 跨平台实现<br/>
+        原生 Windows + macOS 支持, 体积小 (4-6MB), 性能高
+      </div>
+    </div>
+
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
