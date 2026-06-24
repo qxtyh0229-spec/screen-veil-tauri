@@ -18,12 +18,14 @@ jobs:
             artifact_glob: |
               src-tauri/target/aarch64-apple-darwin/release/bundle/dmg/*.dmg
               src-tauri/target/aarch64-apple-darwin/release/bundle/macos/*.app
+            bundles: app,dmg
           - platform: macos-latest
             target: x86_64-apple-darwin
             artifact_name: ScreenVeil-macOS-x64
             artifact_glob: |
               src-tauri/target/x86_64-apple-darwin/release/bundle/dmg/*.dmg
               src-tauri/target/x86_64-apple-darwin/release/bundle/macos/*.app
+            bundles: app,dmg
           - platform: windows-latest
             target: x86_64-pc-windows-msvc
             artifact_name: ScreenVeil-Windows-x64
@@ -31,6 +33,7 @@ jobs:
               src-tauri/target/x86_64-pc-windows-msvc/release/screen-veil.exe
               src-tauri/target/x86_64-pc-windows-msvc/release/bundle/msi/*.msi
               src-tauri/target/x86_64-pc-windows-msvc/release/bundle/nsis/*.exe
+            bundles: msi,nsis
 
     runs-on: ${{ matrix.platform }}
     steps:
@@ -63,9 +66,14 @@ jobs:
         run: npm ci
 
       - name: Build app
+        env:
+          RUST_BACKTRACE: full
+          CARGO_TERM_COLOR: always
         run: |
           cd src-tauri
-          cargo tauri build --target ${{ matrix.target }} --bundles app,dmg,msi,nsis
+          set -o pipefail
+          cargo tauri build --target ${{ matrix.target }} --bundles ${{ matrix.bundles }} 2>&1 | tee build.log
+          echo "Exit code: $?"
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
