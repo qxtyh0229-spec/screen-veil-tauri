@@ -13,24 +13,13 @@ crate-type = ["staticlib", "cdylib", "rlib"]
 tauri-build = { version = "2.0", features = [] }
 
 [dependencies]
-tauri = { version = "2.1", features = [] }
+tauri = { version = "2.1", features = ["macos-private-api"] }
 tauri-plugin-global-shortcut = "2.0"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 
-# Windows 特定
-[target."cfg(windows)".dependencies]
-windows = { version = "0.58", features = [
-    "Win32_Foundation",
-    "Win32_UI_WindowsAndMessaging",
-    "Win32_Graphics_Gdi",
-    "Win32_System_LibraryLoader",
-    "Win32_UI_HiDpi",
-] }
-
-# macOS 特定
-[target.'cfg(target_os = "macos")'.dependencies]
-objc = "0.2"
+# 路径 C: 跨平台统一用 Tauri WebviewWindow, 不再需要平台特定依赖
+# (Windows 和 macOS 都由 tauri 自带的 webview 处理, 体积更小、bug 更少)
 
 [profile.release]
 opt-level = "s"

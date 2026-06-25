@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <!-- App Sandbox: 必须关闭才能注册全局快捷键 + 屏幕遮罩 -->
+    <!-- 否则沙盒不允许事件监听其他应用 -->
+    <key>com.apple.security.app-sandbox</key>
+    <false/>
+
+    <!-- 允许读取其他 app 窗口 (用于窗口列表查询) -->
+    <key>com.apple.security.automation.apple-events</key>
+    <true/>
+
+    <!-- 屏幕录制权限描述 (仅声明, 不实际录制) -->
+    <key>com.apple.security.screen-capture</key>
+    <true/>
+
+    <!-- 允许应用向其他 app 发送 Apple Events (可选, 预留) -->
+    <key>com.apple.security.temporary-exception.apple-events</key>
+    <array>
+        <string>com.apple.systemevents</string>
+    </array>
+
+    <!-- 允许读写用户选择的文件 (可选) -->
+    <key>com.apple.security.files.user-selected.read-write</key>
+    <true/>
+
+    <!-- 网络客户端 (可选, 后续可能加 online 状态) -->
+    <key>com.apple.security.network.client</key>
+    <true/>
+</dict>
+</plist>

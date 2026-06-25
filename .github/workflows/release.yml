@@ -6,8 +6,15 @@ on:
       - 'v*'
   workflow_dispatch:
 
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: "1"
+  # 让 Tauri 在 CI 模式下不要尝试 codesign (用 ad-hoc)
+  CI: "true"
+
 jobs:
   build:
+    name: ${{ matrix.artifact_name }}
     strategy:
       fail-fast: false
       matrix:
@@ -19,6 +26,7 @@ jobs:
               src-tauri/target/aarch64-apple-darwin/release/bundle/dmg/*.dmg
               src-tauri/target/aarch64-apple-darwin/release/bundle/macos/*.app
             bundles: app,dmg
+            rust_target: aarch64-apple-darwin
           - platform: macos-latest
             target: x86_64-apple-darwin
             artifact_name: ScreenVeil-macOS-x64
@@ -26,6 +34,7 @@ jobs:
               src-tauri/target/x86_64-apple-darwin/release/bundle/dmg/*.dmg
               src-tauri/target/x86_64-apple-darwin/release/bundle/macos/*.app
             bundles: app,dmg
+            rust_target: x86_64-apple-darwin
           - platform: windows-latest
             target: x86_64-pc-windows-msvc
             artifact_name: ScreenVeil-Windows-x64
@@ -34,6 +43,7 @@ jobs:
               src-tauri/target/x86_64-pc-windows-msvc/release/bundle/msi/*.msi
               src-tauri/target/x86_64-pc-windows-msvc/release/bundle/nsis/*.exe
             bundles: msi,nsis
+            rust_target: x86_64-pc-windows-msvc
 
     runs-on: ${{ matrix.platform }}
     steps:
@@ -47,12 +57,48 @@ jobs:
           cache: 'npm'
           cache-dependency-path: package-lock.json
 
+      # ============ macOS 特定步骤 ============
+      - name: macOS - 检查 Xcode 命令行工具
+        if: matrix.platform == 'macos-latest'
+        run: |
+          echo "Xcode CLT version:"
+          xcode-select -p
+          pkgutil --pkg-info=com.apple.pkg.CLTools_Executables 2>/dev/null | grep version || echo "no CLT pkg-info"
+          # macOS 14+ 默认已装 CLT, 但保险起见再确认
+          xcrun --version
+
+      - name: macOS - 显示系统信息
+        if: matrix.platform == 'macos-latest'
+        run: |
+          sw_vers
+          uname -a
+
+      - name: macOS - 接受 Xcode 许可
+        if: matrix.platform == 'macos-latest'
+        continue-on-error: true
+        run: |
+          sudo xcodebuild -license accept 2>/dev/null || true
+          sudo xcode-select --install 2>/dev/null || true
+
+      - name: macOS - 验证 Info.plist / entitlements
+        if: matrix.platform == 'macos-latest'
+        run: |
+          echo "=== Info.plist ==="
+          cat src-tauri/Info.plist
+          echo ""
+          echo "=== entitlements.plist ==="
+          cat src-tauri/entitlements.plist
+          echo ""
+          echo "=== tauri.conf.json bundle.macOS ==="
+          python3 -c "import json; print(json.dumps(json.load(open('src-tauri/tauri.conf.json'))['bundle']['macOS'], indent=2))"
+
+      # ============ 通用 Rust 设置 ============
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
 
       - name: Add Rust target
         run: |
-          rustup target add ${{ matrix.target }}
+          rustup target add ${{ matrix.rust_target }}
 
       - name: Cache cargo
         uses: Swatinem/rust-cache@v2
@@ -65,16 +111,54 @@ jobs:
       - name: Install npm dependencies
         run: npm ci
 
-      - name: Build app
+      # ============ Build ============
+      - name: Build app (macOS)
+        if: matrix.platform == 'macos-latest'
         env:
-          RUST_BACKTRACE: full
-          CARGO_TERM_COLOR: always
+          # 让 Tauri 用 ad-hoc 签名 (不需 Apple Developer ID)
+          TAURI_SIGNING_PRIVATE_KEY: ""
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ""
+        shell: bash
+        run: |
+          cd src-tauri
+          echo "Building target: ${{ matrix.target }}"
+          echo "Bundles: ${{ matrix.bundles }}"
+          # 不传 --bundles 避免环境差异
+          cargo tauri build --target ${{ matrix.target }} --bundles ${{ matrix.bundles }} 2>&1 | tee build.log
+          echo "Exit code: ${PIPESTATUS[0]}"
+
+      - name: Build app (Windows)
+        if: matrix.platform == 'windows-latest'
         shell: bash
         run: |
           cd src-tauri
           cargo tauri build --target ${{ matrix.target }} --bundles ${{ matrix.bundles }} 2>&1 | tee build.log
-          echo "Exit code: $?"
+          echo "Exit code: ${PIPESTATUS[0]}"
 
+      # ============ 验证产物 ============
+      - name: 验证 macOS 产物
+        if: matrix.platform == 'macos-latest'
+        run: |
+          echo "=== dmg 目录 ==="
+          ls -la target/${{ matrix.target }}/release/bundle/dmg/ 2>&1 || echo "no dmg dir"
+          echo "=== macos app 目录 ==="
+          ls -la target/${{ matrix.target }}/release/bundle/macos/ 2>&1 || echo "no macos dir"
+          echo "=== bundle 总览 ==="
+          find target/${{ matrix.target }}/release/bundle/ -maxdepth 3 -type f 2>&1 | head -30
+
+      - name: 验证 Windows 产物
+        if: matrix.platform == 'windows-latest'
+        run: |
+          echo "=== exe ==="
+          ls -la target/${{ matrix.target }}/release/*.exe 2>&1 || echo "no exe"
+          echo "=== msi ==="
+          ls -la target/${{ matrix.target }}/release/bundle/msi/ 2>&1 || echo "no msi dir"
+          echo "=== nsis ==="
+          ls -la target/${{ matrix.target }}/release/bundle/nsis/ 2>&1 || echo "no nsis dir"
+          echo "=== bundle 总览 ==="
+          Get-ChildItem target/${{ matrix.target }}/release/bundle/ -Recurse -File 2>&1 | Select-Object -First 30
+
+      # ============ 上传 artifacts ============
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -95,8 +179,13 @@ jobs:
         with:
           path: artifacts
 
+      - name: List downloaded artifacts
+        run: |
+          find artifacts -type f | head -50
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           files: artifacts/**/*
           generate_release_notes: true
+          fail_on_unmatched_files: false

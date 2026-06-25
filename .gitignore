@@ -27,3 +27,8 @@ Thumbs.db
 
 # Logs
 *.log
+
+# Internal dev notes (not for source repo)
+GITHUB_PUSH_STEPS.md
+PUSH_*.md
+NOTES.md

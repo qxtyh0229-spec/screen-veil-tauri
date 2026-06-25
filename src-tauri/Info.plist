@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <!-- 关键: 后台运行不显示在 Dock 栏 -->
+    <key>LSUIElement</key>
+    <true/>
+
+    <!-- macOS 11+ 自动终止支持, 应用长期空闲时系统可以回收资源 -->
+    <key>NSSupportsAutomaticTermination</key>
+    <true/>
+    <!-- 应用隐藏时系统可以重启它 -->
+    <key>NSSupportsSuddenTermination</key>
+    <true/>
+
+    <!-- 元数据 -->
+    <key>CFBundleName</key>
+    <string>ScreenVeil</string>
+    <key>CFBundleDisplayName</key>
+    <string>Screen Veil</string>
+    <key>CFBundleIdentifier</key>
+    <string>com.qclaw.screenveil</string>
+    <key>CFBundleVersion</key>
+    <string>1.0.0</string>
+    <key>CFBundleShortVersionString</key>
+    <string>1.0.0</string>
+    <key>CFBundleExecutable</key>
+    <string>screen-veil</string>
+    <key>CFBundlePackageType</key>
+    <string>APPL</string>
+    <key>CFBundleInfoDictionaryVersion</key>
+    <string>6.0</string>
+    <key>CFBundleSignature</key>
+    <string>????</string>
+    <key>NSHumanReadableCopyright</key>
+    <string>© 2026 QClaw. All rights reserved.</string>
+    <key>LSApplicationCategoryType</key>
+    <string>public.app-category.utilities</string>
+
+    <!-- 最低系统要求 -->
+    <key>LSMinimumSystemVersion</key>
+    <string>10.13</string>
+
+    <!-- 屏幕录制 / Accessibility 说明: macOS 11+ 需要 -->
+    <key>NSScreenCaptureDescription</key>
+    <string>ScreenVeil 用全局快捷键在你的屏幕上覆盖一层警告遮罩, 不会录制你的屏幕内容。</string>
+
+    <!-- 高 DPI 渲染支持 -->
+    <key>NSHighResolutionCapable</key>
+    <true/>
+    <!-- Retina 模式: YES 让 webview 渲染 2x -->
+    <key>NSRequiresAquaSystemAppearance</key>
+    <false/>
+
+    <!-- 深色模式 -->
+    <key>NSUserInterfaceStyle</key>
+    <string>Dark</string>
+
+    <!-- Webview 透明背景支持 -->
+    <key>NSWindowTransparent</key>
+    <true/>
+
+    <!-- Apple Silicon (M1/M2/M3) 原生支持标识 -->
+    <key>LSRequiresNativeExecutable</key>
+    <true/>
+</dict>
+</plist>

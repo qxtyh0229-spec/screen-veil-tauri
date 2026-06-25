@@ -26,7 +26,8 @@
     ],
     "security": {
       "csp": null
-    }
+    },
+    "macOSPrivateApi": true
   },
   "bundle": {
     "active": true,
@@ -40,6 +41,21 @@
     ],
     "category": "Utility",
     "shortDescription": "Cross-platform global hotkey screen veil",
-    "longDescription": "Press a global hotkey to instantly veil your screen with a warning message. Cross-platform Tauri implementation."
+    "longDescription": "Press a global hotkey to instantly veil your screen with a warning message. Cross-platform Tauri implementation.",
+    "publisher": "QClaw",
+    "copyright": "© 2026 QClaw",
+    "macOS": {
+      "frameworks": [],
+      "minimumSystemVersion": "10.13",
+      "exceptionDomain": null,
+      "signingIdentity": null,
+      "hardenedRuntime": false,
+      "providerShortName": null,
+      "entitlements": "entitlements.plist",
+      "infoPlist": "Info.plist"
+    }
+  },
+  "plugins": {
+    "global-shortcut": {}
   }
 }
